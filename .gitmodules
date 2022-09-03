@@ -1,0 +1,4 @@
+[submodule "deps/kita"]
+	path = deps/kita
+	url = git@github.com:u16rogue/kita.git
+	shallow = true

@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 
+add_subdirectory("deps/kita")
+
 project(
 	bad_echo_driver
 )
@@ -20,4 +22,10 @@ add_custom_command(
     TARGET ${PROJECT_NAME}
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/echo-bin/EchoDrv.sys" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/EchoDrv.sys"
+)
+
+target_link_libraries(
+    ${PROJECT_NAME}
+    PRIVATE
+    kita
 )
