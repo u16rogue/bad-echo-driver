@@ -11,7 +11,7 @@
 
 static auto on_pre_render(kita::events::on_pre_render * e) -> void
 {
-	std::this_thread::sleep_for(std::chrono::milliseconds(50));
+	std::this_thread::sleep_for(std::chrono::milliseconds(1));
 }
 
 static auto on_render(kita::events::on_render * e) -> void
@@ -20,10 +20,10 @@ static auto on_render(kita::events::on_render * e) -> void
 
 	// ObRegisterCallback
 	ImGui::Separator();
-	static const char * obrc_status = "...";
+	static const char * obrc_status = "Idle";
 	static bool obrc_working = false;
 	static int obrc_pids[4] = {};
-	ImGui::Text("ObRegisterCallback:");
+	ImGui::Text("ObRegisterCallback");
 	ImGui::Text("PID Protect:");
 	ImGui::SameLine();
 	ImGui::InputInt("##pidprot", &obrc_pids[0]);
@@ -44,7 +44,31 @@ static auto on_render(kita::events::on_render * e) -> void
 		static std::future<void> _; _ = std::async(std::launch::async, [&] {
 			echo::req_obrcb_protect req = {};
 			for (int _ri = 0; _ri < 4; ++_ri) ((int *)&req)[_ri] = obrc_pids[_ri];
-			obrc_status = echo::ioctl_request(req) == echo::INVALID_REQUEST ? "Failed" : "Success";
+			printf(
+				"\n[+] IOCTL Request (req_obrcb_protect) :"
+				"\n\tpid_protect: %lu"
+				"\n\tpid_whitelist: %lu, %lu, %lu"
+				"\n\tis_successful: %lu"
+				"\n\tself/unk: %lu",
+				req.pid_protect,
+				req.pid_white_list[0], req.pid_white_list[1], req.pid_white_list[2], 
+				req.is_successful,
+				req.self_proc_id
+			);
+			auto r = echo::ioctl_request(req);
+			obrc_status = r == echo::INVALID_REQUEST ? "Failed" : "Success";
+			printf(
+				"\n[+] IOCTL Response (req_obrcb_protect) = %lu :"
+				"\n\tpid_protect: %lu"
+				"\n\tpid_whitelist: %lu, %lu, %lu"
+				"\n\tis_successful: %lu"
+				"\n\tself/unk: %lu",
+				r,
+				req.pid_protect,
+				req.pid_white_list[0], req.pid_white_list[1], req.pid_white_list[2], 
+				req.is_successful,
+				req.self_proc_id
+			);
 			obrc_working = false;
 		});
 	}
@@ -55,7 +79,7 @@ static auto on_render(kita::events::on_render * e) -> void
 	ImGui::Separator();
 	static int pup_pid = 0;
 	static bool pup_working = false;
-	static const char * pup_status = "...";
+	static const char * pup_status = "Idle";
 	ImGui::Text("Protected Process");
 	ImGui::Text("PID:");
 	ImGui::SameLine();
@@ -67,7 +91,31 @@ static auto on_render(kita::events::on_render * e) -> void
 		pup_status = "Requesting...";
 		static std::future<void> _; _ = std::async(std::launch::async, [&] {
 			echo::req_proc_protect req = { .pid = (DWORD)pup_pid, .prot_flag = 1 };
-			pup_status = echo::ioctl_request(req) == echo::INVALID_REQUEST ? "Failed" : "Success";
+			printf(
+				"\n[+] IOCTL Request (req_proc_protect) :"
+				"\n\tpid: %lu"
+				"\n\tprot_flag: %lu"
+				"\n\tis_successful: %lu"
+				"\n\tunk2: 0x%x",
+				req.pid,
+				req.prot_flag,
+				req.is_successful,
+				req.unk2
+			);
+			auto r = echo::ioctl_request(req);
+			pup_status = r == echo::INVALID_REQUEST ? "Failed" : "Success";
+			printf(
+				"\n[+] IOCTL Response (req_proc_protect) = %lu :"
+				"\n\tpid: %lu"
+				"\n\tprot_flag: %lu"
+				"\n\tis_successful: %lu"
+				"\n\tunk2: 0x%x",
+				r,
+				req.pid,
+				req.prot_flag,
+				req.is_successful,
+				req.unk2
+			);
 			pup_working = false;
 		});
 	}
@@ -78,12 +126,97 @@ static auto on_render(kita::events::on_render * e) -> void
 		pup_status = "Requesting...";
 		static std::future<void> _; _ = std::async(std::launch::async, [&] {
 			echo::req_proc_unprotect req = { .pid = (DWORD)pup_pid };
-			pup_status = echo::ioctl_request(req) == echo::INVALID_REQUEST ? "Failed" : "Success";
+			printf(
+				"\n[+] IOCTL Request (req_proc_unprotect) :"
+				"\n\tpid: %lu"
+				"\n\told_flag: %lu"
+				"\n\tis_successful: %lu"
+				"\n\tunk2: 0x%x",
+				req.pid,
+				req.old_flag,
+				req.is_successful,
+				req.unk2
+			);
+			auto r = echo::ioctl_request(req);
+			pup_status = r == echo::INVALID_REQUEST ? "Failed" : "Success";
+			printf(
+				"\n[+] IOCTL Response (req_proc_unprotect) = %lu :"
+				"\n\tpid: %lu"
+				"\n\told_flag: %lu"
+				"\n\tis_successful: %lu"
+				"\n\tunk2: 0x%x",
+				r,
+				req.pid,
+				req.old_flag,
+				req.is_successful,
+				req.unk2
+			);
 			pup_working = false;
 		});
 	}
 	ImGui::SameLine();
 	ImGui::Text("%s", pup_status);
+
+	// OpenProcess
+	ImGui::Separator();
+	static int op_pid = 0;
+	static bool op_working = false;
+	static const char * op_status = "Idle";
+	static HANDLE op_handle = NULL; 
+	ImGui::Text("Open Process");
+
+	ImGui::Text("Handle: 0x%p", op_handle);
+	ImGui::SameLine();
+	if (ImGui::Button("Close"))
+	{
+		if (CloseHandle(op_handle))
+			op_handle = NULL;
+	}
+	ImGui::Text("PID:");
+	ImGui::SameLine();
+	ImGui::InputInt("##op", &op_pid);
+	if (ImGui::Button("Open") && !op_working)
+	{
+		op_status = "Requesting...";
+		op_working = true;
+		static std::future<void> _; _ = std::async(std::launch::async, [&] {
+			echo::req_proc_open req = { .pid = (DWORD)op_pid, .desired_access = PROCESS_ALL_ACCESS };
+			printf(
+				"\n[+] IOCTL Request (req_proc_open) :"
+				"\n\tpid: %lu"
+				"\n\tdesired_access: %lu"
+				"\n\thandle_out: 0x%p"
+				"\n\tis_successful: %lu"
+				"\n\tunk0: 0x%x",
+				req.pid,
+				req.desired_access,
+				req.handle_out,
+				req.is_successful,
+				req.unk0
+			);
+			auto r = echo::ioctl_request(req);
+			op_status = r == echo::INVALID_REQUEST ? "Failed" : "Success";
+			if (r != echo::INVALID_REQUEST)
+				op_handle = req.handle_out;
+			printf(
+				"\n[+] IOCTL Response (req_proc_open) %lu :"
+				"\n\tpid: %lu"
+				"\n\tdesired_access: %lu"
+				"\n\thandle_out: 0x%p"
+				"\n\tis_successful: %lu"
+				"\n\tunk0: 0x%x",
+				r,
+				req.pid,
+				req.desired_access,
+				req.handle_out,
+				req.is_successful,
+				req.unk0
+			);
+			op_working = false;
+		});
+	}
+	ImGui::SameLine();	
+	ImGui::Text("%s", op_status);
 }
 
 static auto get_service_handle(SC_HANDLE sc_manager, const char * driver_path) -> SC_HANDLE
