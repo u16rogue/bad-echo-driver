@@ -6,6 +6,7 @@
 #include <winternl.h>
 #include <filesystem>
 #include <future>
+#include <imgui_memory_editor/imgui_memory_editor.h>
 #include "utils.hpp"
 #include "echo.hpp"
 
@@ -17,6 +18,9 @@ static auto on_pre_render(kita::events::on_pre_render * e) -> void
 static auto on_render(kita::events::on_render * e) -> void
 {
 	ImGui::Text("bad_echo | FPS: %f", ImGui::GetIO().Framerate);
+
+	if (static bool freed = false; !freed && ImGui::Button("Free Console"))
+		freed = FreeConsole();
 
 	// ObRegisterCallback
 	ImGui::Separator();
@@ -217,6 +221,126 @@ static auto on_render(kita::events::on_render * e) -> void
 	}
 	ImGui::SameLine();	
 	ImGui::Text("%s", op_status);
+
+	// Read Memory
+	ImGui::Separator();
+	static MemoryEditor imgui_me;
+	static void * rm_address = nullptr;
+	static char _adr[128] = {};
+	static int rm_read_size = 4;
+	static std::unique_ptr<std::uint8_t[]> rm_buffer;
+	static std::uint64_t rm_resp_size_read = 0;
+	static bool rm_working = false;
+	static const char * rm_status = "Idle";
+
+	ImGui::Text("Read Memory");
+	ImGui::Text("Target Address: 0x%p", rm_address);
+	ImGui::Text("Address:");
+	ImGui::SameLine();
+	ImGui::InputText("##rm_adr", _adr, sizeof(_adr) - 1, ImGuiInputTextFlags_CallbackEdit, [](ImGuiInputTextCallbackData * d) -> int {
+		if (sscanf_s(d->Buf, "0x%p", &rm_address) != 1)
+			rm_address = nullptr;
+		return 0;
+	});
+
+	ImGui::Text("Size:");
+	ImGui::SameLine();
+	ImGui::InputInt("##rm_size", &rm_read_size);
+	
+	if (ImGui::Button("Read") && !rm_working)
+	{
+		rm_status = "Requesting...";
+		rm_working = true;
+		rm_buffer = std::make_unique<std::uint8_t[]>(rm_read_size);
+		if (rm_buffer && rm_address && op_handle)
+		{
+			rm_resp_size_read = 0;
+			static std::future<void> _; _ = std::async(std::launch::async, [&] {
+				echo::req_read_memory req = { .proc_handle = op_handle, .read_address = rm_address, .read_buffer = rm_buffer.get(), .buffer_size = (DWORD)rm_read_size };
+				printf(
+					"\n[+] IOCTL Request (req_read_memory) :"
+					"\n\tproc_handle: 0x%p"
+					"\n\tread_address: 0x%p"
+					"\n\tread_buffer: 0x%p"
+					"\n\tbuffer_size: %llu"
+					"\n\tbytes_read_out: %llu"
+					"\n\tis_successful: %lu"
+					"\n\tunk0: 0x%x",
+					req.proc_handle,
+					req.read_address,
+					req.read_buffer,
+					req.buffer_size,
+					req.bytes_read_out,
+					req.is_successful,
+					req.unk0
+				);
+				auto r = echo::ioctl_request(req);
+				rm_status = r == echo::INVALID_REQUEST ? "Failed" : "Success";
+				if (r != echo::INVALID_REQUEST)
+				{
+					rm_resp_size_read = req.bytes_read_out;
+				}
+				printf(
+					"\n[+] IOCTL Response (req_read_memory) %lu :"
+					"\n\tproc_handle: 0x%p"
+					"\n\tread_address: 0x%p"
+					"\n\tread_buffer: 0x%p"
+					"\n\tbuffer_size: %llu"
+					"\n\tbytes_read_out: %llu"
+					"\n\tis_successful: %lu"
+					"\n\tunk0: 0x%x",
+					r,
+					req.proc_handle,
+					req.read_address,
+					req.read_buffer,
+					req.buffer_size,
+					req.bytes_read_out,
+					req.is_successful,
+					req.unk0
+				);
+				rm_working = false;
+			});
+		}
+		else if (!rm_address)
+		{
+			rm_status = "Invalid address";
+			rm_working = false;
+		}
+		else if (!op_handle)
+		{
+			rm_status = "No handle";
+			rm_working = false;
+		}
+		else if (!rm_buffer)
+		{
+			rm_status = "Read buffer allocation failed";
+			rm_working = false;
+		}
+		else
+		{
+			rm_status = "Unknown error";
+			rm_working = false;
+		}
+	}
+	ImGui::SameLine();
+	if (ImGui::Button("Release") && !rm_working)
+	{
+		if (rm_buffer)
+		{
+			rm_buffer = nullptr;
+			rm_resp_size_read = 0;
+			rm_status = "Released read buffer";
+		}
+		else
+		{
+			rm_status = "Nothing to release";
+		}
+	}
+	ImGui::SameLine();
+	ImGui::Text("%s", rm_status);
+
+	if (rm_buffer && rm_resp_size_read != 0 && !rm_working)
+		imgui_me.DrawWindow("Read Memory", rm_buffer.get(), rm_resp_size_read);
 }
 
 static auto get_service_handle(SC_HANDLE sc_manager, const char * driver_path) -> SC_HANDLE
@@ -361,18 +485,18 @@ auto main() -> int
 	echo::req_verify_signature req_verify = {
 		.pb_sig = nullptr,
 		.cb_sig = 0,
-		.is_successful = true, // set back to false for fail which is what we expect
+		.is_successful = true,
 	};
 	if (echo::ioctl_request(req_verify) == echo::INVALID_REQUEST)
 	{
 		printf("\n[!] Verification request failed. GLE: %lu", GetLastError());
 		return 1;
 	}
-	printf(" OK! (flag:%d)", req_verify.is_successful);
+	printf(" OK!");
 
 	printf("\n[+] Ready! Launching GUI...");
 	//FreeConsole();
-	kita::kita_instance("bad-echo", 300, 500)
+	kita::kita_instance("bad-echo", 600, 500)
 		.callbacks(on_pre_render, on_render)
 		.position()
 		.show()

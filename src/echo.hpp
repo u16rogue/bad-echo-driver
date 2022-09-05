@@ -48,16 +48,16 @@ namespace echo
 		void * read_buffer;
 		std::uint64_t buffer_size;
 		std::uint64_t bytes_read_out;
-		std::uint32_t is_successful;
+		DWORD is_successful;
 		std::uint32_t unk0;
 	};
 
 	ECHO_DECL_IOCTL_REQ(req_proc_open, CREATE_PROCESS_HANDLE)
 	{
-		std::uint32_t pid;
-		std::uint32_t desired_access;
+		DWORD pid;
+		DWORD desired_access;
 		HANDLE handle_out;
-		std::uint32_t is_successful;
+		DWORD is_successful;
 		std::uint32_t unk0;
 	};
 
@@ -66,8 +66,8 @@ namespace echo
 		PUCHAR pb_sig;
 		ULONG cb_sig;
 		char pad[4];
-		std::uint32_t is_successful;
-		DWORD unk0; 
+		DWORD is_successful;
+		std::uint32_t unk0; 
 	};
 
 	
@@ -75,23 +75,23 @@ namespace echo
 	{
 		DWORD pid_protect;
 		DWORD pid_white_list[3];
-		std::uint32_t is_successful;
+		DWORD is_successful;
 		DWORD self_proc_id;
 	};
 
 	ECHO_DECL_IOCTL_REQ(req_proc_protect, PROTECT_PROCESS)
 	{
 		DWORD pid;
-		std::uint32_t prot_flag; // set to 2
-		std::uint32_t is_successful;
+		DWORD prot_flag; // set to 2 or 1
+		DWORD is_successful;
 		std::uint32_t unk2;
 	};
 
 	ECHO_DECL_IOCTL_REQ(req_proc_unprotect, UNPROTECT_PROCESS)
 	{
 		DWORD pid;
-		std::uint32_t old_flag;
-		std::uint32_t is_successful;
+		DWORD old_flag;
+		DWORD is_successful;
 		std::uint32_t unk2;
 	};
 

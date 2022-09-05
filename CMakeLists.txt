@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.18)
 
+#Dependencies
 add_subdirectory("deps/kita")
 
+project(imgui_club)
+add_library(${PROJECT_NAME} INTERFACE "deps/imgui_club/imgui_memory_editor/imgui_memory_editor.h")
+target_include_directories(${PROJECT_NAME} INTERFACE "deps/imgui_club/")
+target_link_libraries(${PROJECT_NAME} INTERFACE kita)
+
+# Main project
 project(
 	bad_echo_driver
 )
@@ -37,4 +44,5 @@ target_link_libraries(
     ${PROJECT_NAME}
     PRIVATE
     kita
+    imgui_club
 )
