@@ -8,6 +8,15 @@ project(
 
 add_executable(
 	${PROJECT_NAME}
+
+	"src/utils.hpp"
+    "src/utils.cpp"
+
+    "src/global.hpp"
+
+	"src/echo.hpp"
+	"src/echo.cpp"
+
 	"src/main.cpp"
 )
 
@@ -15,7 +24,7 @@ set_target_properties(
     ${PROJECT_NAME}
     PROPERTIES
     CXX_STANDARD 20
-    OUTPUT_NAME "echo_bridge"
+    OUTPUT_NAME "bad_echo"
 )
 
 add_custom_command(
