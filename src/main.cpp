@@ -401,7 +401,7 @@ auto main() -> int
 	printf(" 0x%p", echo::service_handle);
 
 	printf("\n[+] Starting service...");
-	if (SERVICE_STATUS ss {}; !StartServiceA(echo::service_handle, 0, nullptr))
+	if (!StartServiceA(echo::service_handle, 0, nullptr))
 	{
 		auto e_code = GetLastError();
 		if (e_code != ERROR_SERVICE_ALREADY_RUNNING)
@@ -456,7 +456,7 @@ auto main() -> int
 	decltype(NtCreateFile) * _NtCreateFile = (decltype(_NtCreateFile))GetProcAddress(mod_ntdll, "NtCreateFile");
 	if (!_NtCreateFile)
 	{
-		printf("\n[!] Failed to import kernelbase.NtCreateFile");
+		printf("\n[!] Failed to import ntdll.NtCreateFile");
 		return 1;
 	}
 	printf(" 0x%p", _NtCreateFile);
