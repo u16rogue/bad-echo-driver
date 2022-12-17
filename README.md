@@ -14,4 +14,4 @@ Protect, Unprotect, Filter handles, Create handle, and Read memory by abusing a 
 * [imgui_club](https://github.com/ocornut/imgui_club) - For the hex editor component
 
 ## Thanks
-* [eternal / sam](https://github.com/git-eternal) - Providing the binarie
+* [eternal / sam](https://github.com/git-eternal) - Providing the binaries
